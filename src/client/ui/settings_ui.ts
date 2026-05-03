@@ -8,6 +8,7 @@ import { AudioManager } from '../managers/audio_manager';
 import { CutSceneManager } from '../managers/cut_scene_manager';
 import { HUDManager } from '../managers/hud_manager';
 import { getMultiplayerManager } from '../managers/multiplayer_manager';
+import { hideAllRemotePeers } from '../managers/remote_peer_proxy';
 import { CharacterLock } from '../utils/character_lock';
 import { EnvironmentLock } from '../utils/environment_lock';
 
@@ -816,6 +817,8 @@ export class SettingsUI {
       return;
     }
 
+    hideAllRemotePeers();
+
     if (environmentName !== previousEnvironmentName) {
       this.lastSelectedEnvironmentName = previousEnvironmentName;
     }
@@ -882,6 +885,8 @@ export class SettingsUI {
     }
 
     this.closePanel();
+
+    hideAllRemotePeers();
 
     if (!skipCutscene) {
       const foundEnv = ASSETS.ENVIRONMENTS.find((env) => env.name === environmentName);
