@@ -2,7 +2,14 @@
 const deploymentSettings = {
   host: 'netlify',
   type: 'static',
-  services: [],
+  services: [
+    {
+      name: 'multiplayer',
+      type: 'go',
+      routePrefix: '/api/multiplayer',
+      localPort: 5000
+    }
+  ],
   static: {
     basePath: '/'
   }

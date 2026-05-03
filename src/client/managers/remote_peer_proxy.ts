@@ -35,6 +35,15 @@ interface PeerEntry {
 
 const peers = new Map<string, PeerEntry>();
 
+/**
+ * Set to true from the moment an environment switch begins until the new
+ * environment name is confirmed by the render loop. While true,
+ * applyPeerVisualLayer will never enable any peer, preventing SSE state
+ * updates that arrive mid-transition from re-showing avatars from the
+ * departing environment.
+ */
+let localTransitioning = false;
+
 function sameEnvironment(remote: string, local: string): boolean {
   const r = remote.trim();
   const l = local.trim();
@@ -77,7 +86,9 @@ function createFallbackBox(entry: PeerEntry, clientId: string): void {
 
 /** Shows or hides GLB + particles; stops animations/particles when hidden. */
 function applyPeerVisualLayer(entry: PeerEntry): void {
-  const active = sameEnvironment(entry.remoteEnvironmentName, entry.lastLocalEnvironmentName);
+  const active =
+    !localTransitioning &&
+    sameEnvironment(entry.remoteEnvironmentName, entry.lastLocalEnvironmentName);
   try {
     entry.root.setEnabled(active);
   } catch {
@@ -403,8 +414,37 @@ function syncRemoteLocomotion(entry: PeerEntry, state: CharacterState): void {
 }
 
 /**
+ * Hides all remote peers and raises the transitioning flag so that incoming
+ * SSE state updates cannot re-show them mid-transition. Call at the start of
+ * an environment switch. The flag is cleared automatically by
+ * refreshRemotePeerVisibilityForLocalEnvironment once the new environment name
+ * is confirmed by the render loop.
+ */
+export function hideAllRemotePeers(): void {
+  localTransitioning = true;
+  for (const entry of peers.values()) {
+    try {
+      entry.root.setEnabled(false);
+    } catch {
+      /* disposed */
+    }
+    const ps = entry.particleSystem;
+    if (ps) {
+      try {
+        ps.stop();
+      } catch {
+        entry.particleSystem = null;
+      }
+    }
+    stopAllRemoteGroups(entry.remoteAnimationGroups);
+    entry.lastAnimationToken = '';
+  }
+}
+
+/**
  * Re-apply visibility for all remote peers when only the **local** scene changes
- * (same cached peer states, new local environment name).
+ * (same cached peer states, new local environment name). Also clears the
+ * localTransitioning flag so peers in the new environment become visible.
  */
 export function refreshRemotePeerVisibilityForLocalEnvironment(
   scene: BABYLON.Scene,
@@ -417,6 +457,8 @@ export function refreshRemotePeerVisibilityForLocalEnvironment(
   } catch {
     return;
   }
+
+  localTransitioning = false;
 
   const local = localEnvironmentName.trim();
   for (const [clientId, entry] of peers) {

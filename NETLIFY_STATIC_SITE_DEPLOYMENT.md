@@ -46,13 +46,20 @@ For multiplayer, the client must connect to a remote multiplayer server or run w
 
 In `src/deployment/settings/settings.mjs`, configure the deployment for Netlify static hosting.
 
-Example:
+Example (with local multiplayer dev server):
 
 ```js
 const deploymentSettings = {
   host: 'netlify',
   type: 'static',
-  services: [],
+  services: [
+    {
+      name: 'multiplayer',
+      type: 'go',
+      routePrefix: '/api/multiplayer',
+      localPort: 5000
+    }
+  ],
   static: {
     basePath: '/'
   }
@@ -62,7 +69,7 @@ export default deploymentSettings;
 ```
 
 - `host: 'netlify'` and `type: 'static'` are required.
-- `services` can be an empty array because Netlify will only host the client assets.
+- `services` should include the multiplayer Go server entry with `localPort: 5000`. This tells the Vite dev server to proxy `/api/multiplayer/*` → `localhost:5000` when running `npm run dev` locally, so that `npm run dev:multiplayer` is reachable from the browser. **`localPort` is only used by the Vite dev proxy — it has no effect on the Netlify build or deployment.** Omitting the service entry (leaving `services: []`) causes every multiplayer API call to 404 in local dev.
 - `basePath` controls the deployed base URL if you publish to a subpath; `/` is the default.
 
 ### Step 2: Prepare deployment artifacts

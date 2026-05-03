@@ -181,8 +181,30 @@ Defaults target **Render** **web-service**: Docker + Nginx-style SPA serving, `P
 ### Static host quick notes
 
 - **github.io** — `host: github.io`, `type: static`, prepare, commit workflow.
-- **netlify** — `host: netlify`, `type: static`, prepare, commit `netlify.toml`.
+- **netlify** — `host: netlify`, `type: static`, prepare, commit `netlify.toml`. Include any backend services (e.g. the Go multiplayer server) in `services[]` with a `localPort` so the Vite dev proxy routes local API calls correctly. `localPort` is ignored by Netlify at deploy time — it only activates the dev proxy.
 - **render static** — `host: render.com`, `type: static`, prepare.
+
+**Netlify + local multiplayer example** (`settings.mjs`):
+
+```js
+const deploymentSettings = {
+  host: 'netlify',
+  type: 'static',
+  services: [
+    {
+      name: 'multiplayer',
+      type: 'go',
+      routePrefix: '/api/multiplayer',
+      localPort: 5000
+    }
+  ],
+  static: {
+    basePath: '/'
+  }
+};
+```
+
+With this config, `npm run dev` proxies `/api/multiplayer/*` → `localhost:5000` so `npm run dev:multiplayer` (the Go server) is reachable from the browser. Omitting the service entry (leaving `services: []`) causes every multiplayer API call to 404 in local dev.
 
 ---
 
