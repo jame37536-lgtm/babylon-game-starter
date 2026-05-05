@@ -327,7 +327,6 @@ export const ASSETS = {
           position: new BABYLON.Vector3(3, 2.5, 16.5),
           diffuseColor: new BABYLON.Color3(0.83, 0.63, 0.63),
           intensity: 1.0,
-          range: 100
         },
         {
           lightType: 'HEMISPHERIC' satisfies LightType,
