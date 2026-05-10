@@ -144,6 +144,21 @@ In the GitHub repository:
 - Set **Source** to **GitHub Actions**.
 - Confirm Actions are enabled for the repository.
 - Confirm repository Actions settings allow workflows to create Pages deployments. The generated workflow requests `pages: write` and `id-token: write`.
+- Open **Settings -> Environments -> github-pages** and confirm the deployment branch policy allows `gh-deploy`. If the environment is restricted to selected branches, add `gh-deploy` to the allowed deployment branches. Otherwise, choose unrestricted deployment branches if that matches your repo policy.
+
+The generated workflow deploys to the `github-pages` environment:
+
+```yaml
+deploy:
+  environment:
+    name: github-pages
+```
+
+GitHub checks this environment's deployment protection rules after the workflow starts. If `gh-deploy` is not allowed there, the build can succeed but the deploy job will fail with:
+
+```text
+Branch "gh-deploy" is not allowed to deploy to github-pages due to environment protection rules.
+```
 
 ### Step 5: Configure GitHub Actions environment variables
 
@@ -219,6 +234,7 @@ If the page loads without styles or JavaScript, check that `static.basePath` exa
 ## Troubleshooting
 
 - If the site loads without assets, verify `static.basePath` matches the GitHub Pages URL path, including leading and trailing slashes.
+- If the deploy job says `Branch "gh-deploy" is not allowed to deploy to github-pages due to environment protection rules`, open **Settings -> Environments -> github-pages** and allow `gh-deploy` in the deployment branch policy.
 - If the workflow does not deploy, confirm Pages source is set to **GitHub Actions** and the workflow has `pages: write` and `id-token: write` permissions.
 - If the site loads but multiplayer fails, open the browser console and confirm the client is probing the expected host.
 - If using a custom host, confirm the server responds to `/api/multiplayer/health` and that CORS allows the GitHub Pages origin.
