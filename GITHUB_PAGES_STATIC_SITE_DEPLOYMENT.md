@@ -199,7 +199,7 @@ For the default project-site URL, the published app is expected at:
 https://<owner>.github.io/babylon-game-starter/
 ```
 
-If the page loads without styles or JavaScript, check that `static.basePath` exactly matches the deployed path.
+If the page loads without styles, JavaScript, favicon, or loading-screen logo, check that `static.basePath` exactly matches the deployed path; branding assets under `src/client/public/branding/` use the same Vite base path as the rest of the build.
 
 ## Multiplayer behavior details
 
