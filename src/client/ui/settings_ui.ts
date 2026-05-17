@@ -18,7 +18,8 @@ import {
   bindOutsideClose,
   bindOverlayPressFeedback,
   bindOverlayToggle,
-  bindPreventTextSelection
+  bindPreventTextSelection,
+  repositionOverlayButton
 } from './overlay_button_utils';
 
 import type { OutsideCloseBinding, OverlayToggleBinding } from './overlay_button_utils';
@@ -181,7 +182,19 @@ export class SettingsUI {
     this.createSettingsButton(canvas);
     this.createSettingsPanel(canvas);
     this.setupEventListeners();
+    this.scheduleOverlayReposition();
     this.isInitializing = false; // Allow onChange after initialization
+  }
+
+  private static scheduleOverlayReposition(): void {
+    const reposition = (): void => {
+      if (this.settingsButton) {
+        repositionOverlayButton(this.settingsButton, 'bottom-left');
+      }
+    };
+    requestAnimationFrame(() => {
+      requestAnimationFrame(reposition);
+    });
   }
 
   private static createSettingsButton(canvas: HTMLCanvasElement): void {
@@ -706,6 +719,9 @@ export class SettingsUI {
   }
 
   private static handleWindowResize = (): void => {
+    if (this.settingsButton) {
+      repositionOverlayButton(this.settingsButton, 'bottom-left');
+    }
     if (this.isPanelOpen) {
       this.updatePanelWidth();
     }
@@ -735,10 +751,10 @@ export class SettingsUI {
     if (!this.settingsPanel || !this.settingsButton) return;
     this.settingsPanel.style.left = '0px';
     this.isPanelOpen = true;
-    // Keep the button visible and on top
+    this.settingsButton.dataset.panelOpen = 'true';
     this.settingsButton.style.transform = 'scale(1.1)';
     this.settingsButton.style.background = 'rgba(0, 0, 0, 0.9)';
-    this.settingsButton.style.zIndex = CONFIG.SETTINGS.BUTTON_Z_INDEX.toString(); // Ensure button stays on top
+    this.settingsButton.style.zIndex = CONFIG.SETTINGS.BUTTON_Z_INDEX.toString();
 
     // Sync split rendering state when panel opens
     // Use requestAnimationFrame to ensure DOM is ready
@@ -754,9 +770,10 @@ export class SettingsUI {
     const panelWidth = this.settingsPanel.offsetWidth;
     this.settingsPanel.style.left = `-${panelWidth}px`;
     this.isPanelOpen = false;
+    this.settingsButton.dataset.panelOpen = 'false';
     this.settingsButton.style.transform = 'scale(1)';
     this.settingsButton.style.background = 'rgba(0, 0, 0, 0.7)';
-    this.settingsButton.style.zIndex = CONFIG.SETTINGS.BUTTON_Z_INDEX.toString(); // Reset z-index
+    this.settingsButton.style.zIndex = CONFIG.SETTINGS.BUTTON_Z_INDEX.toString();
   }
 
   private static updatePanelWidth(): void {

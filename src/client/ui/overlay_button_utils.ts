@@ -5,14 +5,20 @@
 import { MOBILE_CONTROLS } from '../config/mobile_controls';
 import { DeviceDetector } from '../utils/device_detector';
 
-const DESKTOP_CORNER_BOTTOM = 20;
+const DESKTOP_CORNER_INSET = 20;
 const OVERLAY_BUTTON_SIZE = 50;
+/** Bottom strip on mobile — HUD stays at the top; these sit low beside touch controls. */
+const MOBILE_BOTTOM_INSET = 20;
 
 export type OverlayCorner = 'bottom-left' | 'bottom-right';
 
 export interface OverlayButtonStyleOptions {
   corner: OverlayCorner;
   zIndex: number;
+}
+
+export interface OverlayButtonLayout {
+  top?: number;
   bottom?: number;
   left?: number;
   right?: number;
@@ -27,20 +33,58 @@ export interface OutsideCloseBinding {
 }
 
 /**
- * Bottom inset for corner overlay buttons: above mobile joystick / action buttons.
+ * True when on-screen mobile joystick / action buttons are in use.
  */
-export function getMobileCornerBottomInset(): number {
-  if (!DeviceDetector.isMobileDevice()) {
-    return DESKTOP_CORNER_BOTTOM;
+export function shouldUseMobileOverlayLayout(): boolean {
+  return DeviceDetector.isMobileDevice() || document.getElementById('mobile-joystick') != null;
+}
+
+/**
+ * Layout for settings / inventory — always bottom corners.
+ * On mobile: stay on the bottom edge but shift inward beside joystick / jump+boost columns.
+ */
+export function getOverlayButtonLayout(corner: OverlayCorner): OverlayButtonLayout {
+  const margin = DESKTOP_CORNER_INSET;
+
+  if (shouldUseMobileOverlayLayout()) {
+    const joystickWidth = MOBILE_CONTROLS.JOYSTICK_RADIUS * 2;
+    const actionColumnWidth = MOBILE_CONTROLS.BUTTON_SIZE + margin;
+
+    if (corner === 'bottom-left') {
+      // Right of the joystick column, still on the bottom strip
+      return {
+        bottom: MOBILE_BOTTOM_INSET,
+        left: joystickWidth + margin
+      };
+    }
+    // Left of the jump/boost column, still on the bottom strip
+    return {
+      bottom: MOBILE_BOTTOM_INSET,
+      right: actionColumnWidth + margin
+    };
   }
 
-  const joystickBottom = MOBILE_CONTROLS.POSITIONS.JOYSTICK.BOTTOM;
-  const joystickDiameter = MOBILE_CONTROLS.JOYSTICK_RADIUS * 2;
-  const boostBottom = MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.BOTTOM;
-  const boostSize = MOBILE_CONTROLS.BUTTON_SIZE;
-  const controlStackHeight = Math.max(joystickBottom + joystickDiameter, boostBottom + boostSize);
+  if (corner === 'bottom-left') {
+    return { bottom: margin, left: margin };
+  }
+  return { bottom: margin, right: margin };
+}
 
-  return controlStackHeight + DESKTOP_CORNER_BOTTOM;
+function layoutToCss(layout: OverlayButtonLayout): string {
+  const parts: string[] = [];
+  if (layout.top != null) {
+    parts.push(`top: ${layout.top}px`);
+  }
+  if (layout.bottom != null) {
+    parts.push(`bottom: ${layout.bottom}px`);
+  }
+  if (layout.left != null) {
+    parts.push(`left: ${layout.left}px`);
+  }
+  if (layout.right != null) {
+    parts.push(`right: ${layout.right}px`);
+  }
+  return parts.join('; ');
 }
 
 /**
@@ -50,16 +94,12 @@ export function applyOverlayButtonBaseStyles(
   el: HTMLElement,
   options: OverlayButtonStyleOptions
 ): void {
-  const bottom = options.bottom ?? getMobileCornerBottomInset();
-  const horizontal =
-    options.corner === 'bottom-left'
-      ? `left: ${options.left ?? DESKTOP_CORNER_BOTTOM}px;`
-      : `right: ${options.right ?? DESKTOP_CORNER_BOTTOM}px;`;
+  const layout = getOverlayButtonLayout(options.corner);
+  const positionCss = layoutToCss(layout);
 
   el.style.cssText = `
     position: fixed;
-    bottom: ${bottom}px;
-    ${horizontal}
+    ${positionCss};
     width: ${OVERLAY_BUTTON_SIZE}px;
     height: ${OVERLAY_BUTTON_SIZE}px;
     z-index: ${options.zIndex};
@@ -76,8 +116,32 @@ export function applyOverlayButtonBaseStyles(
     -ms-user-select: none;
     pointer-events: auto;
     border-radius: 50%;
+    box-sizing: border-box;
     transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   `;
+}
+
+/**
+ * Re-applies corner position (e.g. after resize or mobile controls mount).
+ */
+export function repositionOverlayButton(el: HTMLElement, corner: OverlayCorner): void {
+  const layout = getOverlayButtonLayout(corner);
+  el.style.top = '';
+  el.style.bottom = layout.bottom != null ? `${layout.bottom}px` : '';
+  el.style.left = layout.left != null ? `${layout.left}px` : '';
+  el.style.right = layout.right != null ? `${layout.right}px` : '';
+}
+
+/** After mobile controls mount, snap settings/inventory beside them on the bottom edge. */
+export function repositionAllOverlayButtons(): void {
+  const settings = document.getElementById('settings-button');
+  const inventory = document.getElementById('inventory-button');
+  if (settings instanceof HTMLElement) {
+    repositionOverlayButton(settings, 'bottom-left');
+  }
+  if (inventory instanceof HTMLElement) {
+    repositionOverlayButton(inventory, 'bottom-right');
+  }
 }
 
 const PRESS_BACKGROUND = 'rgba(0, 0, 0, 0.9)';
@@ -117,8 +181,13 @@ export function bindOverlayPressFeedback(el: HTMLElement): OverlayToggleBinding 
   };
 
   const onRelease = (): void => {
-    el.style.background = DEFAULT_BACKGROUND;
-    el.style.borderColor = DEFAULT_BORDER;
+    if (el.dataset.panelOpen === 'true') {
+      el.style.background = PRESS_BACKGROUND;
+      el.style.borderColor = PRESS_BORDER;
+    } else {
+      el.style.background = DEFAULT_BACKGROUND;
+      el.style.borderColor = DEFAULT_BORDER;
+    }
     el.style.transform = 'scale(1)';
   };
 
@@ -138,35 +207,43 @@ export function bindOverlayPressFeedback(el: HTMLElement): OverlayToggleBinding 
 }
 
 /**
- * Toggle handler: pointerup primary, click fallback for keyboard activation.
+ * Toggle on pointerup; click fallback for keyboard. Stops propagation so game controls do not steal the tap.
  */
 export function bindOverlayToggle(el: HTMLElement, onToggle: () => void): OverlayToggleBinding {
-  let pointerTogglePending = false;
+  let suppressClick = false;
+
+  const stopBubble = (e: Event): void => {
+    e.stopPropagation();
+  };
 
   const handlePointerUp = (e: PointerEvent): void => {
     if (e.pointerType === 'mouse' && e.button !== 0) {
       return;
     }
-    pointerTogglePending = true;
+    suppressClick = true;
+    stopBubble(e);
     onToggle();
     window.setTimeout(() => {
-      pointerTogglePending = false;
-    }, 0);
+      suppressClick = false;
+    }, 400);
   };
 
   const handleClick = (e: MouseEvent): void => {
-    if (pointerTogglePending) {
+    stopBubble(e);
+    if (suppressClick) {
       e.preventDefault();
       return;
     }
     onToggle();
   };
 
+  el.addEventListener('pointerdown', stopBubble);
   el.addEventListener('pointerup', handlePointerUp);
   el.addEventListener('click', handleClick);
 
   return {
     remove: () => {
+      el.removeEventListener('pointerdown', stopBubble);
       el.removeEventListener('pointerup', handlePointerUp);
       el.removeEventListener('click', handleClick);
     }

@@ -11,7 +11,8 @@ import {
   bindOutsideClose,
   bindOverlayPressFeedback,
   bindOverlayToggle,
-  bindPreventTextSelection
+  bindPreventTextSelection,
+  repositionOverlayButton
 } from './overlay_button_utils';
 
 import type { OutsideCloseBinding, OverlayToggleBinding } from './overlay_button_utils';
@@ -40,7 +41,19 @@ export class InventoryUI {
     this.createInventoryButton(canvas);
     this.createInventoryPanel(canvas);
     this.setupEventListeners();
-    this.updateInventoryButton(); // Initialize button state
+    this.updateInventoryButton();
+    this.scheduleOverlayReposition();
+  }
+
+  private static scheduleOverlayReposition(): void {
+    const reposition = (): void => {
+      if (this.inventoryButton) {
+        repositionOverlayButton(this.inventoryButton, 'bottom-right');
+      }
+    };
+    requestAnimationFrame(() => {
+      requestAnimationFrame(reposition);
+    });
   }
 
   /**
@@ -348,6 +361,9 @@ export class InventoryUI {
   }
 
   private static handleWindowResize = (): void => {
+    if (this.inventoryButton) {
+      repositionOverlayButton(this.inventoryButton, 'bottom-right');
+    }
     if (this.isPanelOpen) {
       this.updatePanelWidth();
     }
@@ -385,8 +401,8 @@ export class InventoryUI {
       this.isPanelOpen = true;
       this.updateInventoryContent();
       this.updateInventoryButton();
-      // Keep the button visible and on top - no transform animation
       if (this.inventoryButton) {
+        this.inventoryButton.dataset.panelOpen = 'true';
         this.inventoryButton.style.background = 'rgba(0, 0, 0, 0.9)';
         this.inventoryButton.style.zIndex = CONFIG.INVENTORY.BUTTON_Z_INDEX.toString();
       }
@@ -401,6 +417,7 @@ export class InventoryUI {
       this.inventoryPanel.style.right = '-100%';
       this.isPanelOpen = false;
       if (this.inventoryButton) {
+        this.inventoryButton.dataset.panelOpen = 'false';
         this.inventoryButton.style.background = 'rgba(0, 0, 0, 0.7)';
         this.inventoryButton.style.zIndex = CONFIG.INVENTORY.BUTTON_Z_INDEX.toString();
       }

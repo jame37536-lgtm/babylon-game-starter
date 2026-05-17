@@ -5,6 +5,7 @@
 // /// <reference path="../types/babylon.d.ts" />
 
 import { MOBILE_CONTROLS } from '../config/mobile_controls';
+import { repositionAllOverlayButtons } from '../ui/overlay_button_utils';
 // No imports needed
 
 export class MobileInputManager {
@@ -50,6 +51,7 @@ export class MobileInputManager {
 
     // Apply visibility settings from config
     this.applyVisibilitySettings();
+    repositionAllOverlayButtons();
 
     this.isInitialized = true;
   }
