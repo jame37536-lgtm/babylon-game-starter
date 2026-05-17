@@ -94,7 +94,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [gh-deploy]
-  # For workflow_dispatch, use this same branch (gh-deploy) so environment rules match on.push.
+  # Only gh-deploy is a valid ref (see assert job). Pushes to main do not match on.push and do not start this workflow.
   workflow_dispatch:
 
 permissions:
@@ -110,10 +110,10 @@ jobs:
   assert_deploy_branch:
     runs-on: ubuntu-latest
     steps:
-      - name: Enforce gh-deploy for manual runs
+      - name: Only gh-deploy may reach the github-pages environment
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${GITHUB_REF}" != "refs/heads/gh-deploy" ]; then
-            echo "::error::GitHub Pages deploy is only supported from gh-deploy. Use Run workflow with branch gh-deploy, or push to gh-deploy."
+          if [ "${GITHUB_REF}" != "refs/heads/gh-deploy" ]; then
+            echo "::error::Pages deploy runs only on ref gh-deploy."
             exit 1
           fi
 
@@ -220,7 +220,7 @@ Deploy through GitHub Actions:
 - Commit the generated `.github/workflows/deploy-github-pages.yml`.
 - Push to `gh-deploy` to trigger the workflow on push.
 - Or run **Deploy GitHub Pages** manually: **Actions** → select the workflow → **Run workflow**, and set **Use workflow from** to **`gh-deploy`** (not **`main`**). The default branch in that dropdown is often **`main`**; leaving it there makes GitHub check **`main`** against the **`github-pages`** environment, which fails if only **`gh-deploy`** is allowed.
-- **Assert job:** manual runs from **`main`**, feature branches, or other refs fail immediately in **`assert_deploy_branch`** with a clear error (before the **`github-pages`** environment runs).
+- **`assert_deploy_branch`:** any run whose ref is not **`gh-deploy`** exits before build/deploy (including **Run workflow** left on **`main`**). **Pushing to `main` does not match `on.push` for this workflow**, so it does not start a run; a `Branch "main" is not allowed…` error means something started a run with ref **`main`** (almost always **Run workflow** from the default branch, or an older workflow revision without this guard).
 - From the CLI: `gh workflow run "Deploy GitHub Pages" --ref gh-deploy`
 - After deployment, GitHub Pages serves the uploaded `dist/` artifact.
 
@@ -265,7 +265,7 @@ If the page loads without styles, JavaScript, favicon, or loading-screen logo, c
 ## Troubleshooting
 
 - If the site loads without assets, verify `static.basePath` matches the GitHub Pages URL path, including leading and trailing slashes.
-- If **`assert_deploy_branch`** fails with an error that Pages only runs from **`gh-deploy`**, you started **Run workflow** from the wrong branch. Switch **Use workflow from** to **`gh-deploy`** and rerun.
+- If **`assert_deploy_branch`** fails, the workflow ref is not **`gh-deploy`**. For **Run workflow**, set **Use workflow from** to **`gh-deploy`**. Pushes to **`main`** do not start this workflow unless **`on.push`** mistakenly lists **`main`**—fix the YAML in that case.
 - If the deploy job says `Branch "gh-deploy" is not allowed to deploy to github-pages due to environment protection rules`, open **Settings -> Environments -> github-pages** and allow `gh-deploy` in the deployment branch policy.
 - If the message names **`main`** (`Branch "main" is not allowed...`), rerun the workflow from **`gh-deploy`** (or push to **`gh-deploy`**). You likely used **Run workflow** with **Use workflow from** set to **`main`**. Widening **`github-pages`** to allow **`main`** is not the default solution.
 - If the workflow does not deploy, confirm Pages source is set to **GitHub Actions** and the workflow has `pages: write` and `id-token: write` permissions.

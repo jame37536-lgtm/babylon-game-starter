@@ -3,7 +3,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [gh-deploy]
-  # For workflow_dispatch, use this same branch (gh-deploy) so environment rules match on.push.
+  # Only gh-deploy is a valid ref (see assert_deploy_branch). Pushes to main do not match on.push and do not start this workflow.
   workflow_dispatch:
 
 permissions:
@@ -19,10 +19,10 @@ jobs:
   assert_deploy_branch:
     runs-on: ubuntu-latest
     steps:
-      - name: Enforce gh-deploy for manual runs
+      - name: Only gh-deploy may reach the github-pages environment
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${GITHUB_REF}" != "refs/heads/gh-deploy" ]; then
-            echo "::error::GitHub Pages deploy is only supported from gh-deploy. Open Actions → this workflow → Run workflow and set \"Use workflow from\" to gh-deploy, or push to gh-deploy. (Ref: ${GITHUB_REF})"
+          if [ "${GITHUB_REF}" != "refs/heads/gh-deploy" ]; then
+            echo "::error::Pages deploy runs only on ref gh-deploy (push already filters to gh-deploy; for Run workflow set Use workflow from to gh-deploy). Current ref: ${GITHUB_REF}"
             exit 1
           fi
 
