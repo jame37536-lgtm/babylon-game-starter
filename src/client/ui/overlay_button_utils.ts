@@ -258,10 +258,11 @@ export interface OutsideCloseOptions {
 }
 
 /**
- * Close overlay when tapping outside panel and trigger (capture phase).
+ * Close overlay when tapping outside panel and trigger.
+ * Uses click (not capture-phase pointerdown) so mobile toggles/selects still work.
  */
 export function bindOutsideClose(options: OutsideCloseOptions): OutsideCloseBinding {
-  const handlePointerDown = (e: PointerEvent): void => {
+  const handleClickOutside = (e: MouseEvent): void => {
     if (!options.isOpen()) {
       return;
     }
@@ -278,11 +279,11 @@ export function bindOutsideClose(options: OutsideCloseOptions): OutsideCloseBind
     options.onClose();
   };
 
-  document.addEventListener('pointerdown', handlePointerDown, true);
+  document.addEventListener('click', handleClickOutside);
 
   return {
     remove: () => {
-      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('click', handleClickOutside);
     }
   };
 }

@@ -113,7 +113,16 @@ export class InventoryUI {
             color: white;
             font-family: Arial, sans-serif;
             overflow-y: auto;
+            pointer-events: auto;
+            touch-action: manipulation;
         `;
+
+    this.inventoryPanel.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+    });
+    this.inventoryPanel.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    });
 
     this.updateInventoryContent();
     document.body.appendChild(this.inventoryPanel);
@@ -397,7 +406,9 @@ export class InventoryUI {
    */
   private static openPanel(): void {
     if (this.inventoryPanel) {
+      this.updatePanelWidth();
       this.inventoryPanel.style.right = '0';
+      this.inventoryPanel.style.zIndex = String(CONFIG.INVENTORY.BUTTON_Z_INDEX + 50);
       this.isPanelOpen = true;
       this.updateInventoryContent();
       this.updateInventoryButton();
@@ -415,6 +426,7 @@ export class InventoryUI {
   private static closePanel(): void {
     if (this.inventoryPanel) {
       this.inventoryPanel.style.right = '-100%';
+      this.inventoryPanel.style.zIndex = String(CONFIG.INVENTORY.Z_INDEX);
       this.isPanelOpen = false;
       if (this.inventoryButton) {
         this.inventoryButton.dataset.panelOpen = 'false';

@@ -226,15 +226,24 @@ export class SettingsUI {
     document.body.appendChild(this.settingsButton);
   }
 
+  private static getPanelWidthPx(): number {
+    const viewWidth = window.innerWidth;
+    if (viewWidth < CONFIG.SETTINGS.FULL_SCREEN_THRESHOLD) {
+      return viewWidth;
+    }
+    return Math.max(
+      viewWidth * CONFIG.SETTINGS.PANEL_WIDTH_RATIO,
+      CONFIG.SETTINGS.FULL_SCREEN_THRESHOLD
+    );
+  }
+
   private static createSettingsPanel(canvas: HTMLCanvasElement): void {
     void canvas;
     // Create settings panel
     this.settingsPanel = document.createElement('div');
     this.settingsPanel.id = 'settings-panel';
 
-    // Calculate panel width (1/3 of view width with minimum 500px)
-    const viewWidth = window.innerWidth;
-    const panelWidth = Math.max(viewWidth / 3, 500);
+    const panelWidth = this.getPanelWidthPx();
 
     // Generate sections HTML
     const sectionsHTML = this.generateSectionsHTML();
@@ -263,7 +272,16 @@ export class SettingsUI {
             color: white;
             font-family: Arial, sans-serif;
             overflow-y: auto;
+            pointer-events: auto;
+            touch-action: manipulation;
         `;
+
+    this.settingsPanel.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+    });
+    this.settingsPanel.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    });
 
     // Style the header
     const header = this.settingsPanel.querySelector('.settings-header');
@@ -298,6 +316,7 @@ export class SettingsUI {
     this.applySectionStyles();
 
     document.body.appendChild(this.settingsPanel);
+    this.updatePanelWidth();
 
     // Setup section event listeners
     this.setupSectionEventListeners();
@@ -311,6 +330,7 @@ export class SettingsUI {
 
     // Also listen for resize events
     window.addEventListener('resize', () => {
+      this.updatePanelWidth();
       this.regenerateSections();
     });
   }
@@ -363,7 +383,9 @@ export class SettingsUI {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                gap: 12px;
                 margin-bottom: 10px;
+                min-width: 0;
             `;
       }
     });
@@ -377,6 +399,8 @@ export class SettingsUI {
                 font-size: 16px;
                 font-weight: 600;
                 color: white;
+                flex: 1 1 auto;
+                min-width: 0;
             `;
       }
     });
@@ -388,6 +412,7 @@ export class SettingsUI {
         toggleSwitch.style.cssText = `
                 position: relative;
                 display: inline-block;
+                flex: 0 0 auto;
                 width: 50px;
                 height: 24px;
             `;
@@ -398,9 +423,14 @@ export class SettingsUI {
     toggleInputs.forEach((input) => {
       if (input instanceof HTMLElement) {
         input.style.cssText = `
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                margin: 0;
                 opacity: 0;
-                width: 0;
-                height: 0;
+                cursor: pointer;
+                z-index: 2;
             `;
       }
     });
@@ -418,6 +448,7 @@ export class SettingsUI {
                 background-color: rgba(255, 255, 255, 0.3);
                 transition: 0.3s;
                 border-radius: 24px;
+                pointer-events: none;
             `;
 
         // Add pseudo-element for the toggle circle if it doesn't exist
@@ -433,6 +464,9 @@ export class SettingsUI {
     selects.forEach((select) => {
       if (select instanceof HTMLElement) {
         select.style.cssText = `
+                flex: 0 1 auto;
+                max-width: 48%;
+                min-width: 96px;
                 padding: 8px 12px;
                 background: rgba(255, 255, 255, 0.1);
                 border: 1px solid rgba(255, 255, 255, 0.3);
@@ -440,6 +474,9 @@ export class SettingsUI {
                 color: white;
                 font-size: 14px;
                 cursor: pointer;
+                box-sizing: border-box;
+                touch-action: manipulation;
+                min-height: 40px;
             `;
       }
     });
@@ -567,7 +604,9 @@ export class SettingsUI {
             return;
           }
 
-          await this.runSectionAction(section.actionId, target.checked);
+          if (!this.isInitializing) {
+            await this.runSectionAction(section.actionId, target.checked);
+          }
         })();
       });
     });
@@ -656,8 +695,8 @@ export class SettingsUI {
       });
     });
 
-    // Add toggle state change handlers
     this.setupToggleStateHandlers();
+    this.syncAllToggleVisualStates();
 
     // Try to initialize pg-split element cache
     // Use requestAnimationFrame to handle delayed element availability
@@ -673,25 +712,40 @@ export class SettingsUI {
     });
   }
 
+  private static applyToggleVisualState(input: HTMLInputElement): void {
+    const slider = input.nextElementSibling;
+    if (!(slider instanceof HTMLElement)) return;
+    const toggleCircle = slider.querySelector('span');
+    if (!(toggleCircle instanceof HTMLElement)) return;
+
+    if (input.checked) {
+      slider.style.backgroundColor = 'rgba(0, 255, 136, 0.8)';
+      toggleCircle.style.transform = 'translateX(26px)';
+    } else {
+      slider.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+      toggleCircle.style.transform = 'translateX(0)';
+    }
+  }
+
+  private static syncAllToggleVisualStates(): void {
+    if (!this.settingsPanel) return;
+    const toggleInputs = this.settingsPanel.querySelectorAll('.toggle-switch input');
+    toggleInputs.forEach((input) => {
+      if (input instanceof HTMLInputElement) {
+        this.applyToggleVisualState(input);
+      }
+    });
+  }
+
   private static setupToggleStateHandlers(): void {
     if (!this.settingsPanel) return;
     const toggleInputs = this.settingsPanel.querySelectorAll('.toggle-switch input');
     toggleInputs.forEach((input) => {
+      if (!(input instanceof HTMLInputElement)) return;
       input.addEventListener('change', (e) => {
         const target = e.target;
         if (!(target instanceof HTMLInputElement)) return;
-        const slider = target.nextElementSibling;
-        if (!(slider instanceof HTMLElement)) return;
-        const toggleCircle = slider.querySelector('span');
-        if (!(toggleCircle instanceof HTMLElement)) return;
-
-        if (target.checked) {
-          slider.style.backgroundColor = 'rgba(0, 255, 136, 0.8)';
-          toggleCircle.style.transform = 'translateX(26px)';
-        } else {
-          slider.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-          toggleCircle.style.transform = 'translateX(0)';
-        }
+        this.applyToggleVisualState(target);
       });
     });
   }
@@ -749,7 +803,9 @@ export class SettingsUI {
 
   private static openPanel(): void {
     if (!this.settingsPanel || !this.settingsButton) return;
+    this.updatePanelWidth();
     this.settingsPanel.style.left = '0px';
+    this.settingsPanel.style.zIndex = String(CONFIG.SETTINGS.BUTTON_Z_INDEX + 50);
     this.isPanelOpen = true;
     this.settingsButton.dataset.panelOpen = 'true';
     this.settingsButton.style.transform = 'scale(1.1)';
@@ -762,6 +818,7 @@ export class SettingsUI {
       this.syncSplitRenderingToggleState();
       this.syncGameHUDToggleState();
       this.syncInspectorToggleState();
+      this.syncAllToggleVisualStates();
     });
   }
 
@@ -769,6 +826,7 @@ export class SettingsUI {
     if (!this.settingsPanel || !this.settingsButton) return;
     const panelWidth = this.settingsPanel.offsetWidth;
     this.settingsPanel.style.left = `-${panelWidth}px`;
+    this.settingsPanel.style.zIndex = String(CONFIG.SETTINGS.Z_INDEX);
     this.isPanelOpen = false;
     this.settingsButton.dataset.panelOpen = 'false';
     this.settingsButton.style.transform = 'scale(1)';
@@ -779,30 +837,20 @@ export class SettingsUI {
   private static updatePanelWidth(): void {
     if (!this.settingsPanel) return;
     const viewWidth = window.innerWidth;
+    const panelWidthPx = this.getPanelWidthPx();
 
-    // If screen width is less than threshold, use full viewport width (100vw)
-    // Otherwise use the configured ratio
     if (viewWidth < CONFIG.SETTINGS.FULL_SCREEN_THRESHOLD) {
-      this.settingsPanel.style.width = '100vw';
-      // Ensure no horizontal overflow on small screens
+      this.settingsPanel.style.width = `${panelWidthPx}px`;
+      this.settingsPanel.style.maxWidth = '100vw';
       this.settingsPanel.style.boxSizing = 'border-box';
-      this.settingsPanel.style.padding = '0';
-      this.settingsPanel.style.margin = '0';
     } else {
-      const panelWidth = Math.max(
-        viewWidth * CONFIG.SETTINGS.PANEL_WIDTH_RATIO,
-        CONFIG.SETTINGS.FULL_SCREEN_THRESHOLD
-      );
-      this.settingsPanel.style.width = `${panelWidth}px`;
-      // Reset to normal styling for larger screens
+      this.settingsPanel.style.width = `${panelWidthPx}px`;
+      this.settingsPanel.style.maxWidth = '';
       this.settingsPanel.style.boxSizing = '';
-      this.settingsPanel.style.padding = '';
-      this.settingsPanel.style.margin = '';
     }
 
     if (!this.isPanelOpen) {
-      const currentWidth = this.settingsPanel.style.width;
-      this.settingsPanel.style.left = `-${currentWidth}`;
+      this.settingsPanel.style.left = `-${panelWidthPx}px`;
     }
   }
 
