@@ -87,9 +87,7 @@ export function applyOverlayButtonBaseStyles(
 ): void {
   const layout = getOverlayButtonLayout(options.corner);
   const positionCss = layoutToCss(layout);
-  const zIndex = shouldUseMobileOverlayLayout()
-    ? MOBILE_CONTROLS.OVERLAY_Z_INDEX
-    : options.zIndex;
+  const zIndex = shouldUseMobileOverlayLayout() ? MOBILE_CONTROLS.OVERLAY_Z_INDEX : options.zIndex;
 
   el.style.cssText = `
     position: fixed;

@@ -357,7 +357,6 @@ export class MobileInputManager {
         passive: false
       });
     }
-
   }
 
   private static touchIdFromEvent(e: TouchEvent | PointerEvent): number | null {
