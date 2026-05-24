@@ -21,7 +21,13 @@ interface InstallCoachCopy {
   readonly showIpadHint: boolean;
 }
 
-let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
+/** Chromium `beforeinstallprompt` event — defined locally for playground export (no global.d.ts). */
+interface ChromiumInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+let deferredInstallPrompt: ChromiumInstallPromptEvent | null = null;
 const installOfferListeners = new Set<() => void>();
 
 function isPlaygroundRuntime(): boolean {
@@ -133,8 +139,8 @@ function notifyInstallOfferChanged(): void {
 
 export function captureChromiumInstallPrompt(event: Event): void {
   event.preventDefault();
-  if ('prompt' in event && typeof (event as BeforeInstallPromptEvent).prompt === 'function') {
-    deferredInstallPrompt = event as BeforeInstallPromptEvent;
+  if ('prompt' in event && typeof (event as ChromiumInstallPromptEvent).prompt === 'function') {
+    deferredInstallPrompt = event as ChromiumInstallPromptEvent;
     notifyInstallOfferChanged();
   }
 }
