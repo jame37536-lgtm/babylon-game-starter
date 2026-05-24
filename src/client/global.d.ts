@@ -27,6 +27,11 @@ declare global {
     __babylon?: BabylonDebugApi;
     CameraManager?: CameraManagerGlobal;
   }
+
+  interface BeforeInstallPromptEvent extends Event {
+    prompt(): Promise<void>;
+    readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+  }
 }
 
 export {};
