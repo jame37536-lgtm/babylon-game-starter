@@ -1002,9 +1002,7 @@ export class SettingsUI {
     if (sectionIndex < 0) {
       return null;
     }
-    const select = this.settingsPanel.querySelector(
-      `select[data-section-index="${sectionIndex}"]`
-    );
+    const select = this.settingsPanel.querySelector(`select[data-section-index="${sectionIndex}"]`);
     return select instanceof HTMLSelectElement ? select : null;
   }
 
@@ -1019,7 +1017,9 @@ export class SettingsUI {
     if (!select) {
       return;
     }
-    const optionExists = Array.from(select.options).some((option) => option.value === environmentName);
+    const optionExists = Array.from(select.options).some(
+      (option) => option.value === environmentName
+    );
     if (!optionExists) {
       return;
     }
