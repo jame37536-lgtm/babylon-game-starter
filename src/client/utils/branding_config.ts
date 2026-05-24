@@ -16,7 +16,7 @@ const DEFAULT_BRANDING: ResolvedBrandingConfig = {
     enabled: true,
     name: 'Babylon Game Starter',
     shortName: 'BGS',
-    description: 'A modular 3D browser game built with Babylon.js',
+    description: 'A modular 3D browser game platform built with Babylon.js',
     themeColor: '#1a1a1a',
     backgroundColor: '#1a1a1a',
     display: 'standalone',
