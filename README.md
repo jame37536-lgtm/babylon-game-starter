@@ -9,6 +9,7 @@
 <p align="center">
 
 [![Release](https://img.shields.io/badge/release-v1.6.0-blue)](https://github.com/EricEisaman/babylon-game-starter/releases)
+[![Live demo](https://img.shields.io/badge/Live_demo-GitHub_Pages-2ea44f)](https://ericisaman.github.io/babylon-game-starter/)
 [![CI](https://github.com/EricEisaman/babylon-game-starter/actions/workflows/typecheck.yml/badge.svg)](https://github.com/EricEisaman/babylon-game-starter/actions/workflows/typecheck.yml)
 [![Babylon.js](https://img.shields.io/badge/Babylon.js-v9-BB464B?logo=babylon.js&logoColor=white)](https://www.babylonjs.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -20,6 +21,8 @@
 Babylon Game Starter provides a complete, ready-to-run foundation for building interactive 3D browser games. It ships with physics-based character movement, an environment system, collectibles, inventory, a behavior trigger system (proximity and fall-out-of-map), particle effects, an AudioV2-powered sound engine, and full mobile control support — all driven by configuration files. The same client can be bundled for the **Babylon.js Playground** via `playground.json`.
 
 **Current release: [v1.6.0](#v160)** — Installable PWA with unified branding, offline cache, and iPad Safari install coach.
+
+**Live demo:** [https://ericisaman.github.io/babylon-game-starter/](https://ericisaman.github.io/babylon-game-starter/) (GitHub Pages)
 
 ---
 
