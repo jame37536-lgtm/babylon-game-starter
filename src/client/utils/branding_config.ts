@@ -47,8 +47,22 @@ const DEFAULT_BRANDING: ResolvedBrandingConfig = {
 let cachedConfig: ResolvedBrandingConfig | null = null;
 let loadPromise: Promise<ResolvedBrandingConfig> | null = null;
 
+/** Vite injects `import.meta.env`; playground TS has no `ImportMetaEnv` type. */
+function readViteBaseUrl(): string {
+  try {
+    const meta = import.meta as { env?: { BASE_URL?: string } };
+    const base = meta.env?.BASE_URL;
+    if (typeof base === 'string' && base.length > 0) {
+      return base.endsWith('/') ? base : `${base}/`;
+    }
+  } catch {
+    // Playground runtime: no Vite env injection.
+  }
+  return '/';
+}
+
 function withAppBasePath(path: string): string {
-  const base = import.meta.env.BASE_URL;
+  const base = readViteBaseUrl();
   if (
     /^(?:[a-z][a-z\d+\-.]*:)?\/\//i.test(path) ||
     path.startsWith('data:') ||
