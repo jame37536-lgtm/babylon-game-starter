@@ -34,6 +34,8 @@ export type EndpointService =
 
 export interface StaticDeploymentConfig {
   basePath?: `/${string}`;
+  /** Canonical public site URL for Open Graph (no trailing slash required). */
+  publicUrl?: string;
   githubPages?: {
     deployBranch?: string;
     environmentName?: string;
